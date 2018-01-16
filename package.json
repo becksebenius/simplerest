@@ -1,7 +1,7 @@
 {
   "name": "simplerest",
   "description": "Simple express wrapper in nodejs",
-  "version": "1.00.0",
+  "version": "1.00.1",
   "author": {
     "name": "Beck Sebenius",
     "email": "rseben@gmail.com"
