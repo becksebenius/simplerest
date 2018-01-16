@@ -37,6 +37,7 @@ rest_server.prototype.onPost = function (api, options, callback){
 		}
 	})
 }
+
 rest_server.prototype.onGet = function (api, options, callback){
 	if(typeof(options) == 'function') {
 		callback = options;
@@ -61,6 +62,7 @@ rest_server.prototype.onGet = function (api, options, callback){
 		}
 	})
 }
+
 rest_server.prototype.admin = function(api, options, callback){
 	if(typeof(options) == 'function') {
 		callback = options;
