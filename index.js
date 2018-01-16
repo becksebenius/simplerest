@@ -1,21 +1,20 @@
 var express = require('express');
-var app = express();
-
 var bodyParser = require('body-parser')
-app.use(bodyParser.json())
-app.use(bodyParser.urlencoded({
-	extended: true
-}))
-app.use(bodyParser.text());
-app.set('view engine', 'jade')
-
-var app_key = '0108e2e1-4b74-421f-a430-d184d0143cfe';
 
 var rest_server = function () {
+	var app = express();
+	app.use(bodyParser.json())
+	app.use(bodyParser.urlencoded({
+		extended: true
+	}))
+	app.use(bodyParser.text());
 
+	this.express = app;
 }
 
 rest_server.prototype.onPost = function (api, options, callback){
+	var self = this;
+
 	if(typeof(options) == 'function') {
 		callback = options;
 		options = {};
@@ -23,12 +22,12 @@ rest_server.prototype.onPost = function (api, options, callback){
 
 	log_api_init ("POST: " + api, options)
 
-	app.post(api, function(req, res){
+	self.express.post(api, function(req, res){
 		try {
 
 			var context = setup_context(req, res);
 
-			if(!auth_req(context, options)) return;
+			if(!auth_req(self, context, options)) return;
 
 			callback(context);
 
@@ -39,6 +38,8 @@ rest_server.prototype.onPost = function (api, options, callback){
 }
 
 rest_server.prototype.onGet = function (api, options, callback){
+	var self = this;
+	
 	if(typeof(options) == 'function') {
 		callback = options;
 		options = {};
@@ -46,12 +47,12 @@ rest_server.prototype.onGet = function (api, options, callback){
 
 	log_api_init ("GET: " + api, options)
 
-	app.get(api, function(req, res){
+	self.express.get(api, function(req, res){
 		try {
 			
 			var context = setup_context(req, res);
 
-			if(!auth_req(context, options)) return;
+			if(!auth_req(self, context, options)) return;
 
 			callback(context);
 
@@ -63,51 +64,10 @@ rest_server.prototype.onGet = function (api, options, callback){
 	})
 }
 
-rest_server.prototype.admin = function(api, options, callback){
-	if(typeof(options) == 'function') {
-		callback = options;
-		options = {}
-	}
+rest_server.prototype.start = function (port) {
+	var self = this;
 
-	// admin requests do not require the auth key
-	options.ignore_authkey = true;
-
-	// all admin pages live in the admin subdirectory
-	api = '/admin' + api;
-
-	log_api_init ("ADMIN: " + api, options)
-
-	app.get(api, function(req, res){
-		try {
-
-			var context = setup_context(req, res);
-
-			// admin panel displays error by rendering
-			context.result.error = function(err){
-				var error_info = get_error_info(err);
-				context.result.render('generic_message', {
-					title: "Error",
-					message: "<b>Error " + err.code + " occured:<br/></b>" + err.message + "<br/><b>Stack:</b><br/>" + err.stack
-				})
-			}
-
-			if(!auth_req(context, options)) return;
-
-			try {
-				callback(context);
-			} catch (err) {
-				context.result.error(err);
-			}
-		} catch (err) {
-
-			handle_error(err, res);
-
-		}
-	})
-}
-
-rest_server.prototype.start = function () {
-	var server = app.listen(8081, function () {
+	var server = self.express.listen(port, function () {
 	  var host = server.address().address
 	  var port = server.address().port
 
@@ -159,13 +119,19 @@ function setup_context (req, res){
 	return context;
 }
 
-function auth_req (context, options) {
+function auth_req (simplerest, context, options) {
+	// No app key required
+	if(!simplerest.app_key)
+	{
+		return true;
+	}
+
 	if(!options.ignore_authkey){
 		var hAppKey = context.request.get('Application-Key');
 		if(hAppKey == null){
 			context.result.error('Application-Key not provided')
 			return false;
-		} else if(hAppKey != app_key){
+		} else if(hAppKey != simplerest.app_key){
 			context.result.error('Application-Key was incorrect');
 			return false;
 		}
@@ -176,8 +142,6 @@ function auth_req (context, options) {
 
 function log_api_init (api_message, options){
 	console.log(api_message);
-	// console.log(JSON.stringify(options, null, 1))
-	// console.log('');
 }
 
 module.exports = rest_server
